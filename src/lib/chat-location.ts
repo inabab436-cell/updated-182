@@ -121,6 +121,7 @@ export function describeLocationsForModel(
       `رابط الخريطة: ${mapsUrl(a.lat, a.lng)}`,
     ];
     if (a.accuracy != null) parts.push(`دقة التحديد: ±${a.accuracy} متر`);
+    if (a.address) parts.push(`العنوان المستخرج من الموقع: ${a.address}`);
     if (a.label) parts.push(`وصف العميل للمكان: ${a.label}`);
     const mins = minutesAgo(a.updated_at, now);
     if (isLiveLocationActive(a, now)) {
