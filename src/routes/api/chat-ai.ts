@@ -1055,7 +1055,16 @@ export const Route = createFileRoute("/api/chat-ai")({
             const o = a as Record<string, unknown>;
             if (o.kind === "location") {
               const loc = sanitizeLocationAttachment(o);
-              if (loc) customerAttachments.push(loc as unknown as Record<string, unknown>);
+              if (loc) {
+                // Resolve a readable address so the agent can read it back to
+                // the customer and ask them to confirm it.
+                if (!loc.address) {
+                  const { reverseGeocode } = await import("@/lib/reverse-geocode.server");
+                  const geo = await reverseGeocode(loc.lat, loc.lng);
+                  if (geo.address) loc.address = geo.address;
+                }
+                customerAttachments.push(loc as unknown as Record<string, unknown>);
+              }
               continue;
             }
             const url = typeof o.url === "string" ? o.url : "";
