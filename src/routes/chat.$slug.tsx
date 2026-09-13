@@ -3,7 +3,7 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import {
   Send, ArrowRight, UserCircle2, Paperclip, X, Loader2,
-  MapPin, Radio, Square, ShoppingBag, ChevronDown,
+  MapPin, Radio, ShoppingBag, ChevronDown,
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -13,7 +13,6 @@ import { getChatConfig } from "@/lib/chat-config.functions";
 import { uploadChatImage } from "@/lib/chat-upload.functions";
 import {
   LIVE_LOCATION_DURATION_MS,
-  LIVE_LOCATION_UPDATE_MS,
   formatLocationSummary,
   isLiveLocationActive,
   mapsUrl,
@@ -171,10 +170,6 @@ function ChatPage() {
   // ---- Live location sharing -------------------------------------------
   const [locBusy, setLocBusy] = useState(false);
   const [locErr, setLocErr] = useState<string | null>(null);
-  const [liveSharing, setLiveSharing] = useState(false);
-  const watchIdRef = useRef<number | null>(null);
-  const liveStopRef = useRef<number | null>(null);
-  const lastPushRef = useRef(0);
 
   const [initErr, setInitErr] = useState<string | null>(null);
   const bottomRef = useRef<HTMLDivElement | null>(null);
