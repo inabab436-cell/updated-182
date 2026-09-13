@@ -92,6 +92,15 @@ export interface ShippingLookupInput {
   zones: ShippingZone[];
   /** Current customer message first, then earlier customer messages. */
   texts: Array<string | null | undefined>;
+  /**
+   * The address/governorate ALREADY recorded for this customer (order state,
+   * profile, or an existing order). Without it, a governorate given a few
+   * messages ago — or captured straight into the record and never repeated in
+   * chat — falls outside the message window and the lookup reports "no area
+   * given", which is exactly what made the agent ask for the governorate again
+   * right after quoting its shipping price.
+   */
+  knownAddress?: string | null;
 }
 
 /**
@@ -101,7 +110,11 @@ export interface ShippingLookupInput {
  */
 export function buildShippingLookupBlock(input: ShippingLookupInput): string {
   const zones = (input.zones ?? []).filter(Boolean);
-  const texts = (input.texts ?? []).filter(Boolean) as string[];
+  const known = String(input.knownAddress ?? "").trim();
+  const texts = [
+    ...((input.texts ?? []).filter(Boolean) as string[]),
+    ...(known ? [known] : []),
+  ];
   const current = texts[0] ?? "";
 
   if (zones.length === 0) {
@@ -115,8 +128,23 @@ export function buildShippingLookupBlock(input: ShippingLookupInput): string {
   const table = zones.map((z) => `- ${zoneLine(z)}`).join("\n");
   const names = zones.map(zoneLabel).join("، ");
 
-  const match = matchShippingZone(zones, texts);
-  const place = namedPlace(zones, current) ?? (texts.length ? namedPlace(zones, texts.join(" ")) : null);
+  // The recorded address is matched FIRST (it is the most reliable statement
+  // of where the customer lives), then the message texts.
+  const match = known
+    ? (() => {
+        const byKnown = matchShippingZone(zones, [known, ...texts]);
+        return byKnown.zone ? byKnown : matchShippingZone(zones, texts);
+      })()
+    : matchShippingZone(zones, texts);
+  const place =
+    namedPlace(zones, current) ??
+    (known ? namedPlace(zones, known) : null) ??
+    (texts.length ? namedPlace(zones, texts.join(" ")) : null);
+
+  const knownLine = known
+    ? `العنوان/المنطقة المسجّلة للعميل بالفعل: ${safeSlice(known, 0, 300)}\n` +
+      "ممنوع تسأل العميل عن محافظته أو منطقته تاني طول ما السطر ده موجود؛ لو محتاج توضيح، أكّد على المكتوب فيه بسؤال تأكيد واحد بس.\n"
+    : "";
 
   let verdict: string;
   if (match.zone) {
@@ -132,12 +160,18 @@ export function buildShippingLookupBlock(input: ShippingLookupInput): string {
       "إلزامي: قول للعميل بوضوح ومرة واحدة إن المنطقة دي مش ضمن مناطق الشحن المسجّلة حاليًا، واعرض عليه المناطق المتاحة فوق. " +
       "ممنوع تقول «هنتأكد ونقولك» أو تكرر نفس الجملة في كل رد، وممنوع تخترع سعر أو مدة، وممنوع تستخدم سعر منطقة تانية.\n" +
       "الأولوية في الدور ده: موضوع الشحن بس. لأن التوصيل نفسه متوقف، ممنوع تطلب في نفس الرسالة أي بيانات تانية (اسم/رقم/تفاصيل عنوان) ولا تصحّح أي بيانات وصلت قبل كده — استنى العميل يحدد منطقة متاحة الأول.";
+  } else if (known) {
+    verdict =
+      "النتيجة: العميل عنده عنوان مسجّل بالفعل لكنه مش مطابق لأي منطقة في الجدول بشكل مؤكد.\n" +
+      "إلزامي: متسألوش عن محافظته من الأول تاني. اذكر العنوان المسجّل زي ما هو واسأله سؤال تأكيد واحد: " +
+      `العنوان ده تابع لأنهي منطقة من المناطق المسجّلة (${safeSlice(names, 0, 800)})، من غير أي وعد بالمراجعة أو التأكد.`;
   } else {
     verdict =
       "النتيجة: العميل لسه ما حددش منطقته.\n" +
       `إلزامي: اسأله سؤال واحد قصير عن محافظته/منطقته من المناطق المسجّلة (${safeSlice(names, 0, 800)})، ` +
       "من غير أي وعد بالمراجعة أو التأكد.";
   }
+
 
   return (
     "\n\n## SHIPPING LOOKUP (live table — read for this exact message)\n" +
@@ -148,7 +182,9 @@ export function buildShippingLookupBlock(input: ShippingLookupInput): string {
     "كل مناطق الشحن المسجّلة الآن:\n" +
     table +
     "\n" +
+    knownLine +
     verdict
+
 
   );
 }
