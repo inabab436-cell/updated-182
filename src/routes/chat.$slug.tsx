@@ -610,45 +610,15 @@ function ChatPage() {
               size="sm"
               className="shrink-0 gap-1.5 rounded-full border-dashed"
               onClick={() => void shareLocation(false)}
-              disabled={disabled || locBusy || liveSharing}
+              disabled={disabled || locBusy}
             >
-              {locBusy && !liveSharing ? (
+              {locBusy ? (
                 <Loader2 className="h-3.5 w-3.5 animate-spin" />
               ) : (
                 <MapPin className="h-3.5 w-3.5" />
               )}
-              موقعي الحالي
+              مشاركة موقعي
             </Button>
-            {liveSharing ? (
-              <Button
-                type="button"
-                variant="destructive"
-                size="sm"
-                className="shrink-0 gap-1.5 rounded-full"
-                onClick={() => void stopLiveSharing()}
-              >
-                <Square className="h-3.5 w-3.5" />
-                إيقاف المشاركة الحية
-              </Button>
-            ) : (
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                className="shrink-0 gap-1.5 rounded-full"
-                onClick={() => void startLiveSharing()}
-                disabled={disabled || locBusy}
-              >
-                <Radio className="h-3.5 w-3.5" />
-                مشاركة الموقع الحية
-              </Button>
-            )}
-            {liveSharing && (
-              <span className="flex shrink-0 items-center gap-1 text-[11px] text-muted-foreground">
-                <span className="inline-block h-2 w-2 animate-pulse rounded-full bg-primary" />
-                جاري تحديث موقعك تلقائياً
-              </span>
-            )}
           </div>
           <div className="flex items-end gap-2 rounded-[1.5rem] border border-border bg-background p-2 shadow-card">
             <input
