@@ -182,7 +182,9 @@ export function buildShippingLookupBlock(input: ShippingLookupInput): string {
     "كل مناطق الشحن المسجّلة الآن:\n" +
     table +
     "\n" +
+    knownLine +
     verdict
+
 
   );
 }
