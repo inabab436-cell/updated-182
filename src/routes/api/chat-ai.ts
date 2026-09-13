@@ -2650,7 +2650,16 @@ export const Route = createFileRoute("/api/chat-ai")({
             shippingLookupBlock = buildShippingLookupBlock({
               zones: merchantData.shipping as any,
               texts: [String(message ?? ""), ...historyCustomerTexts],
+              // The address already recorded for this customer counts as
+              // "the customer said where they are", even when it is older
+              // than the message window.
+              knownAddress:
+                orderStateValueOf(orderState, "address") ??
+                (turnProfile?.address as string | null | undefined) ??
+                (customer?.address as string | null | undefined) ??
+                null,
             });
+
           } catch (e) {
             console.error("[chat-ai] shipping lookup skipped");
           }
