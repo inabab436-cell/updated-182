@@ -81,6 +81,7 @@ export function sanitizeLocationAttachment(raw: unknown): LocationAttachment | n
     lng,
     accuracy: accuracy !== null ? Math.round(accuracy) : null,
     label,
+    address: typeof o.address === "string" && o.address.trim() ? o.address.trim().slice(0, 300) : null,
     live,
     updated_at: updatedAt,
     expires_at: expiresAt,
