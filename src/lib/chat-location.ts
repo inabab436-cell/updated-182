@@ -19,6 +19,8 @@ export type LocationAttachment = {
   accuracy?: number | null;
   /** Optional human label the customer typed / the browser resolved. */
   label?: string | null;
+  /** Readable address resolved from the coordinates on the server. */
+  address?: string | null;
   /** True while the customer is streaming live updates. */
   live?: boolean;
   /** ISO timestamp of the last coordinate update. */
