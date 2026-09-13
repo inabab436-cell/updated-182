@@ -19,6 +19,8 @@ export type LocationAttachment = {
   accuracy?: number | null;
   /** Optional human label the customer typed / the browser resolved. */
   label?: string | null;
+  /** Readable address resolved from the coordinates on the server. */
+  address?: string | null;
   /** True while the customer is streaming live updates. */
   live?: boolean;
   /** ISO timestamp of the last coordinate update. */
@@ -79,6 +81,7 @@ export function sanitizeLocationAttachment(raw: unknown): LocationAttachment | n
     lng,
     accuracy: accuracy !== null ? Math.round(accuracy) : null,
     label,
+    address: typeof o.address === "string" && o.address.trim() ? o.address.trim().slice(0, 300) : null,
     live,
     updated_at: updatedAt,
     expires_at: expiresAt,
@@ -118,6 +121,7 @@ export function describeLocationsForModel(
       `رابط الخريطة: ${mapsUrl(a.lat, a.lng)}`,
     ];
     if (a.accuracy != null) parts.push(`دقة التحديد: ±${a.accuracy} متر`);
+    if (a.address) parts.push(`العنوان المستخرج من الموقع: ${a.address}`);
     if (a.label) parts.push(`وصف العميل للمكان: ${a.label}`);
     const mins = minutesAgo(a.updated_at, now);
     if (isLiveLocationActive(a, now)) {
@@ -132,7 +136,7 @@ export function describeLocationsForModel(
     return `- ${parts.join(" | ")}`;
   });
   const header = opts.isLatest
-    ? "[موقع العميل الحالي — أرسله العميل بنفسه عبر زر مشاركة الموقع. اعتبره بيانات موثوقة واستخدمه في تحديد منطقة الشحن أو تأكيد العنوان، واسأل العميل عن تفاصيل العنوان الناقصة فقط (رقم العمارة/الشقة/علامة مميزة). لا تذكر الإحداثيات نفسها للعميل إلا إذا طلبها.]"
+    ? "[موقع العميل الحالي — أرسله العميل بنفسه عبر زر مشاركة الموقع. اعتبره بيانات موثوقة. أول رد لك بعد استلام الموقع لازم: (1) تكتب العنوان المستخرج من الموقع نصاً للعميل كما هو، (2) تطلب منه يأكده بنعم/لا أو يصححه، (3) تطلب التفاصيل الناقصة فقط (رقم العمارة/الدور/الشقة/علامة مميزة). استخدمه كذلك في تحديد منطقة الشحن ولا تسأل عن المحافظة إذا كانت واضحة من العنوان المستخرج. لا تذكر الإحداثيات نفسها للعميل إلا إذا طلبها.]"
     : "[موقع أرسله العميل سابقاً في هذه المحادثة — سياق فقط، وقد يكون قديماً.]";
   return `${header}\n${lines.join("\n")}`;
 }

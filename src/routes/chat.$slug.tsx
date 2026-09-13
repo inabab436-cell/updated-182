@@ -3,7 +3,7 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import {
   Send, ArrowRight, UserCircle2, Paperclip, X, Loader2,
-  MapPin, Radio, Square, ShoppingBag, ChevronDown,
+  MapPin, Radio, ShoppingBag, ChevronDown,
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -13,7 +13,6 @@ import { getChatConfig } from "@/lib/chat-config.functions";
 import { uploadChatImage } from "@/lib/chat-upload.functions";
 import {
   LIVE_LOCATION_DURATION_MS,
-  LIVE_LOCATION_UPDATE_MS,
   formatLocationSummary,
   isLiveLocationActive,
   mapsUrl,
@@ -171,10 +170,6 @@ function ChatPage() {
   // ---- Live location sharing -------------------------------------------
   const [locBusy, setLocBusy] = useState(false);
   const [locErr, setLocErr] = useState<string | null>(null);
-  const [liveSharing, setLiveSharing] = useState(false);
-  const watchIdRef = useRef<number | null>(null);
-  const liveStopRef = useRef<number | null>(null);
-  const lastPushRef = useRef(0);
 
   const [initErr, setInitErr] = useState<string | null>(null);
   const bottomRef = useRef<HTMLDivElement | null>(null);
@@ -394,77 +389,6 @@ function ChatPage() {
     [callEdge, conversationId, merchantId, visitorId],
   );
 
-  const stopLiveSharing = useCallback(
-    async (convId?: string | null) => {
-      if (watchIdRef.current != null && typeof navigator !== "undefined") {
-        navigator.geolocation.clearWatch(watchIdRef.current);
-        watchIdRef.current = null;
-      }
-      if (liveStopRef.current != null) {
-        window.clearTimeout(liveStopRef.current);
-        liveStopRef.current = null;
-      }
-      setLiveSharing(false);
-      const id = convId ?? conversationId;
-      if (!callEdge || !id) return;
-      try {
-        const pos = await getCurrentPosition();
-        await callEdge({
-          action: "location_update",
-          conversation_id: id,
-          location: {
-            kind: "location",
-            lat: pos.coords.latitude,
-            lng: pos.coords.longitude,
-            accuracy: pos.coords.accuracy,
-            live: false,
-            updated_at: new Date().toISOString(),
-          },
-        });
-      } catch { /* stopping must never surface an error */ }
-    },
-    [callEdge, conversationId],
-  );
-
-  const startLiveSharing = useCallback(async () => {
-    const convId = await shareLocation(true);
-    if (!convId || typeof navigator === "undefined" || !navigator.geolocation) return;
-    setLiveSharing(true);
-    lastPushRef.current = Date.now();
-    watchIdRef.current = navigator.geolocation.watchPosition(
-      (pos) => {
-        const now = Date.now();
-        if (now - lastPushRef.current < LIVE_LOCATION_UPDATE_MS) return;
-        lastPushRef.current = now;
-        callEdge?.({
-          action: "location_update",
-          conversation_id: convId,
-          location: {
-            kind: "location",
-            lat: pos.coords.latitude,
-            lng: pos.coords.longitude,
-            accuracy: pos.coords.accuracy,
-            live: true,
-            updated_at: new Date().toISOString(),
-          },
-        }).catch(() => {});
-      },
-      () => {},
-      { enableHighAccuracy: true, maximumAge: 5000, timeout: 20000 },
-    );
-    liveStopRef.current = window.setTimeout(
-      () => { void stopLiveSharing(convId); },
-      LIVE_LOCATION_DURATION_MS,
-    );
-  }, [callEdge, shareLocation, stopLiveSharing]);
-
-  // Always release the geolocation watch when the page unmounts.
-  useEffect(() => () => {
-    if (watchIdRef.current != null && typeof navigator !== "undefined") {
-      navigator.geolocation.clearWatch(watchIdRef.current);
-    }
-    if (liveStopRef.current != null) window.clearTimeout(liveStopRef.current);
-  }, []);
 
 
   const disabled = sending || !callEdge || !merchantId || !loggedIn;
@@ -610,45 +534,15 @@ function ChatPage() {
               size="sm"
               className="shrink-0 gap-1.5 rounded-full border-dashed"
               onClick={() => void shareLocation(false)}
-              disabled={disabled || locBusy || liveSharing}
+              disabled={disabled || locBusy}
             >
-              {locBusy && !liveSharing ? (
+              {locBusy ? (
                 <Loader2 className="h-3.5 w-3.5 animate-spin" />
               ) : (
                 <MapPin className="h-3.5 w-3.5" />
               )}
-              موقعي الحالي
+              مشاركة موقعي
             </Button>
-            {liveSharing ? (
-              <Button
-                type="button"
-                variant="destructive"
-                size="sm"
-                className="shrink-0 gap-1.5 rounded-full"
-                onClick={() => void stopLiveSharing()}
-              >
-                <Square className="h-3.5 w-3.5" />
-                إيقاف المشاركة الحية
-              </Button>
-            ) : (
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                className="shrink-0 gap-1.5 rounded-full"
-                onClick={() => void startLiveSharing()}
-                disabled={disabled || locBusy}
-              >
-                <Radio className="h-3.5 w-3.5" />
-                مشاركة الموقع الحية
-              </Button>
-            )}
-            {liveSharing && (
-              <span className="flex shrink-0 items-center gap-1 text-[11px] text-muted-foreground">
-                <span className="inline-block h-2 w-2 animate-pulse rounded-full bg-primary" />
-                جاري تحديث موقعك تلقائياً
-              </span>
-            )}
           </div>
           <div className="flex items-end gap-2 rounded-[1.5rem] border border-border bg-background p-2 shadow-card">
             <input
